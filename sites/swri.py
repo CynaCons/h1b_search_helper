@@ -26,7 +26,7 @@ def fetch_jobs():
         # Parse the page source with BeautifulSoup
         soup = BeautifulSoup(driver.page_source, "html.parser")
         jobs = []
-        job_titles = []  # To store all job titles for logging
+        all_titles = []  # To store all job titles for logging
         for row in soup.select("table#tblHistory tr")[1:]:
             columns = row.find_all("td")
             if not columns:
@@ -35,22 +35,28 @@ def fetch_jobs():
             link_tag = columns[1].find("a")
             link = link_tag["href"]
             job_desc = link_tag.get("job_desc", "").strip()  # Extract the job_desc attribute
-            job_titles.append(title)  # Add title to the list
+            all_titles.append(title)  # Add title to the list
 
             # Check if any keyword is in the title or job description
             if any(keyword.lower() in title.lower() or keyword.lower() in job_desc.lower() for keyword in keywords):
                 jobs.append({"title": title, "url": link, "description": job_desc})
 
-        # Ensure the output directory exists
-        output_dir = os.path.join(os.path.dirname(__file__), "..", "output")
-        os.makedirs(output_dir, exist_ok=True)
-
-        # Write all job titles to a text file
-        with open(os.path.join(output_dir, "job_titles_swri.txt"), "w", encoding="utf-8") as file:
-            for job_title in job_titles:
-                file.write(job_title + "\n")
-
         return jobs
 
     finally:
         driver.quit()
+
+        # Write all found job titles
+        with open(f"output/job_titles_swri.txt", "w", encoding="utf-8") as f:
+            for title in all_titles:
+                f.write(title + "\n")
+
+        # Write matching job results
+        with open(f"output/job_results_swri.txt", "w", encoding="utf-8") as f:
+            for job in jobs:
+                job_details = (
+                    f"Title: {job['title']}\n"
+                    f"URL: {job['url']}\n"
+                    f"Description: {job['description']}\n"
+                )
+                f.write(job_details + "\n")  # Write to file
