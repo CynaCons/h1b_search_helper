@@ -6,6 +6,11 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from bs4 import BeautifulSoup
 
+logging.basicConfig(
+    level=logging.INFO,  # Set the logging level to INFO
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"  # Define the log format
+)
+
 KEYWORDS = [
     "embedded", "firmware", "autosar", "real-time", "real time", "software",
     "bare metal", "bsp", "rtos", "low level", "low-level", "device driver"
@@ -17,37 +22,48 @@ def fetch_jobs():
     jobs = []
     all_titles = []
     driver = webdriver.Chrome()
+
     try:
         driver.get("https://careers.umich.edu/")
 
-        # Custom behavior per fetcher
+        # Click the initial search button
         search_button = WebDriverWait(driver, 10).until(
-            EC.element_to_be_clickable((By.ID, "edit-submit-job-search" if "umich" == "umich" else "ctl00_ContentPlaceHolder1_btnSearch"))
+            EC.element_to_be_clickable((By.ID, "edit-submit-job-search"))
         )
         search_button.click()
 
-        WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, "#block-system-main-block table.cols-5" if "umich" == "umich" else "table#ctl00_ContentPlaceHolder1_gvJobSearchResults"))
-        )
+        while True:
+            WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "#block-system-main-block table.cols-5"))
+            )
+            soup = BeautifulSoup(driver.page_source, "html.parser")
+            table = soup.select_one("#block-system-main-block table.cols-5 tbody")
+            rows = table.find_all("tr")
 
-        soup = BeautifulSoup(driver.page_source, "html.parser")
-        table = soup.select_one("#block-system-main-block table.cols-5 tbody" if "umich" == "umich" else "table#ctl00_ContentPlaceHolder1_gvJobSearchResults tbody")
-        rows = table.find_all("tr")
+            for row in rows:
+                title_cell = row.find("td", class_="views-field-title")
+                if not title_cell:
+                    continue
+                link_tag = title_cell.find("a")
+                if not link_tag:
+                    continue
 
-        for row in rows:
-            title_cell = row.find("td", class_="views-field-title") if "umich" == "umich" else row.find_all("td")[0]
-            if not title_cell:
-                continue
-            link_tag = title_cell.find("a")
-            if not link_tag:
-                continue
-            title = link_tag.get_text(strip=True)
-            all_titles.append(title)
-            url = "https://careers.umich.edu" + link_tag["href"] if "umich" == "umich" else "https://resapp.swri.org" + link_tag["href"]
+                title = link_tag.get_text(strip=True)
+                url = "https://careers.umich.edu" + link_tag["href"]
+                all_titles.append(title)
 
-            if any(keyword in title.lower() for keyword in KEYWORDS):
-                jobs.append({"title": title, "url": url})
-                logger.info(f"UMICH: Match found -> {title}")
+                if any(keyword in title.lower() for keyword in KEYWORDS):
+                    jobs.append({"title": title, "url": url})
+                    logger.info(f"UMICH: Match found -> {title}")
+
+            # Try to find the next page button
+            try:
+                next_button_list = driver.find_elements(By.CSS_SELECTOR, "nav[role='navigation'] ul.js-pager__items li a[rel='next']")
+
+                next_button_list[0].click()
+            except:
+                logger.info("UMICH: No more pages.")
+                break
 
     except Exception as e:
         logger.error(f"UMICH: Error while fetching jobs - {e}")
@@ -55,13 +71,13 @@ def fetch_jobs():
     finally:
         driver.quit()
 
-        # Write all found job titles
-        with open(f"output/job_titles_umich.txt", "w", encoding="utf-8") as f:
+        # Save titles
+        os.makedirs("output", exist_ok=True)
+        with open("output/job_titles_umich.txt", "w", encoding="utf-8") as f:
             for title in all_titles:
                 f.write(title + "\n")
 
-        # Write matching job results
-        with open(f"output/job_results_umich.txt", "w", encoding="utf-8") as f:
+        with open("output/job_results_umich.txt", "w", encoding="utf-8") as f:
             for job in jobs:
                 f.write(f"{job['title']} -> {job['url']}\n")
 
