@@ -1,6 +1,7 @@
 from sites import swri
 from sites import umich
 from sites import lanl
+from sites import llmit
 import os
 import shutil
 import logging
@@ -20,6 +21,7 @@ def run_all():
     os.makedirs(output_dir, exist_ok=True)
 
     all_jobs = []
+    all_jobs.extend(llmit.fetch_jobs())
     all_jobs.extend(lanl.fetch_jobs())
     all_jobs.extend(swri.fetch_jobs())
     all_jobs.extend(umich.fetch_jobs())
