@@ -1,5 +1,6 @@
 import logging
 import os
+import time
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -26,32 +27,69 @@ def fetch_jobs():
     try:
         driver.get("https://careers.ll.mit.edu/search")
 
-        # Wait for the search results table to load
-        WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.ID, "searchresults"))
-        )
+        visited_pages = set()
 
-        soup = BeautifulSoup(driver.page_source, "html.parser")
-        table = soup.select_one("table#searchresults tbody")
-        rows = table.find_all("tr", class_="data-row") if table else []
+        while True:
+            # Wait for the job table to load
+            WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.ID, "searchresults"))
+            )
+            soup = BeautifulSoup(driver.page_source, "html.parser")
 
-        for row in rows:
+            # Extract jobs
+            table = soup.select_one("table#searchresults tbody")
+            rows = table.find_all("tr", class_="data-row") if table else []
+
+            for row in rows:
+                try:
+                    title_tag = row.select_one("td.colTitle a.jobTitle-link")
+                    title = title_tag.get_text(strip=True) if title_tag else None
+                    url = "https://careers.ll.mit.edu" + title_tag["href"] if title_tag else None
+
+                    if not title or not url:
+                        continue
+
+                    all_titles.append(title)
+
+                    if any(keyword in title.lower() for keyword in KEYWORDS):
+                        jobs.append({"title": title, "url": url})
+                        logger.info(f"LLMIT: Match found -> {title}")
+
+                except Exception as e:
+                    logger.warning(f"LLMIT: Skipping row due to error: {e}")
+
+            # Find next unvisited page link
+            next_link = None
             try:
-                title_tag = row.select_one("td.colTitle a.jobTitle-link")
-                title = title_tag.get_text(strip=True) if title_tag else None
-                url = "https://careers.ll.mit.edu" + title_tag["href"] if title_tag else None
 
-                if not title or not url:
-                    continue
+                # Get current page number
+                current_page = driver.find_element(By.CSS_SELECTOR, "ul.pagination a.current-page").text.strip()
+                visited_pages.add(current_page)
 
-                all_titles.append(title)
+                # Now find next numeric page not in visited_pages
+                pagination_links = driver.find_elements(By.CSS_SELECTOR, "ul.pagination a")
+                next_link = None
+                for link in pagination_links:
+                    page_text = link.text.strip()
+                    if page_text.isdigit() and page_text not in visited_pages:
+                        next_link = link
+                        break
 
-                if any(keyword in title.lower() for keyword in KEYWORDS):
-                    jobs.append({"title": title, "url": url})
-                    logger.info(f"LLMIT: Match found -> {title}")
-
+                for link in pagination_links:
+                    page_text = link.text.strip()
+                    if page_text and page_text not in visited_pages and page_text.isdigit():
+                        visited_pages.add(page_text)
+                        next_link = link
+                        break
             except Exception as e:
-                logger.warning(f"LLMIT: Skipping row due to error: {e}")
+                logger.warning(f"LLMIT: Error while scanning pagination: {e}")
+
+            if next_link:
+                next_link.click()
+                time.sleep(1.5)  # allow page to render
+            else:
+                logger.info("LLMIT: No more pages.")
+                break
 
     except Exception as e:
         logger.error(f"LLMIT: Error while fetching jobs - {e}")
