@@ -1,5 +1,6 @@
 import logging
 import os
+import yaml
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -79,12 +80,9 @@ def fetch_jobs():
 
         # Save titles
         os.makedirs("output", exist_ok=True)
-        with open("output/job_titles_umich.txt", "w", encoding="utf-8") as f:
-            for title in all_titles:
-                f.write(title + "\n")
-
-        with open("output/job_results_umich.txt", "w", encoding="utf-8") as f:
-            for job in jobs:
-                f.write(f"{job['title']} -> {job['url']}\n")
+        output_path = os.path.join("output", "umich_jobs.yaml")
+        with open(output_path, "w", encoding="utf-8") as f:
+            yaml.dump({"all_titles": all_titles, "jobs": jobs}, f, allow_unicode=True)
+        logger.info(f"UMICH: Job data written to {output_path}")
 
     return jobs

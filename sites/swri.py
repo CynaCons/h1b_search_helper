@@ -1,4 +1,5 @@
 import os
+import yaml
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -37,35 +38,21 @@ def fetch_jobs():
             title = columns[1].get_text(strip=True)
             link_tag = columns[1].find("a")
             link = link_tag["href"]
-            job_desc = link_tag.get("job_desc", "").strip()  # Extract the job_desc attribute
             all_titles.append(title)  # Add title to the list
 
-            # Check if any keyword is in the title or job description
+            # Check if any keyword is in the title
             if any(
-                keyword.lower() in title.lower() or keyword.lower() in job_desc.lower()
+                keyword.lower() in title.lower()
                 for keyword in keywords
             ):
-                jobs.append({"title": title, "url": link, "description": job_desc})
+                jobs.append({"title": title, "url": link})
 
     finally:
         driver.quit()
 
-        # Ensure the output directory exists before writing
         os.makedirs("output", exist_ok=True)
-
-        # Write all found job titles
-        with open("output/job_titles_swri.txt", "w", encoding="utf-8") as f:
-            for title in all_titles:
-                f.write(title + "\n")
-
-        # Write matching job results
-        with open("output/job_results_swri.txt", "w", encoding="utf-8") as f:
-            for job in jobs:
-                job_details = (
-                    f"Title: {job['title']}\n"
-                    f"URL: {job['url']}\n"
-                    f"Description: {job['description']}\n"
-                )
-                f.write(job_details + "\n")  # Write to file
+        output_path = os.path.join("output", "swri_jobs.yaml")
+        with open(output_path, "w", encoding="utf-8") as f:
+            yaml.dump({"all_titles": all_titles, "jobs": jobs}, f, allow_unicode=True)
 
     return jobs

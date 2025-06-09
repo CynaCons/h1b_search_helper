@@ -2,6 +2,7 @@
 import logging
 import os
 import time
+import yaml
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -322,17 +323,10 @@ def fetch_jobs():
         output_dir = "output"
         os.makedirs(output_dir, exist_ok=True)
         
-        all_titles_path = os.path.join(output_dir, "job_titles_lanl.txt")
-        with open(all_titles_path, "w", encoding="utf-8") as f:
-            for title in all_titles:
-                f.write(title + "\n")
-        logger.info(f"LANL: All job titles saved to {all_titles_path}")
-
-        results_path = os.path.join(output_dir, "job_results_lanl.txt")
-        with open(results_path, "w", encoding="utf-8") as f:
-            for job in jobs:
-                f.write(f"{job['title']} -> {job['url']}\n")
-        logger.info(f"LANL: Filtered job results saved to {results_path}")
+        output_path = os.path.join(output_dir, "lanl_jobs.yaml")
+        with open(output_path, "w", encoding="utf-8") as f:
+            yaml.dump({"all_titles": all_titles, "jobs": jobs}, f, allow_unicode=True)
+        logger.info(f"LANL: Job data written to {output_path}")
 
     return jobs
 
