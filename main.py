@@ -25,11 +25,11 @@ def run_all():
     db = job_db.load_db()
 
     sites = [
-        (lanl, "lanl"),
         (sri, "sri"),
         (llmit, "llmit"),
         (swri, "swri"),
         (umich, "umich"),
+        (lanl, "lanl"),
     ]
 
     all_jobs = []
