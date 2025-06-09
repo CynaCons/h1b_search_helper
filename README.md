@@ -26,3 +26,12 @@ jobs:
 ```
 
 All fetchers share this format so the results can be easily processed.
+
+## Supported Sites
+
+* swri
+* umich
+* lanl
+* sri
+* llmit
+* osu
