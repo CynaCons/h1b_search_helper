@@ -3,6 +3,7 @@ from sites import umich
 from sites import lanl
 from sites import sri
 from sites import llmit
+from sites import osu
 import os
 import shutil
 import logging
@@ -30,6 +31,7 @@ def run_all():
         (swri, "swri"),
         (umich, "umich"),
         (lanl, "lanl"),
+        (osu, "osu"),
     ]
 
     all_jobs = []
