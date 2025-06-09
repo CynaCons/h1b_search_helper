@@ -2,6 +2,7 @@
 import logging
 import os
 import time
+import yaml
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -236,7 +237,7 @@ def fetch_jobs():
         # Depending on strictness, you might want to `return []` here if cookie consent is mandatory.
 
         logger.info("LANL: Starting to click 'Load more jobs'.")
-        max_clicks = 50
+        max_clicks = 100
         for i in range(max_clicks):
             try:
                 load_more_button_locator = (By.CSS_SELECTOR, "span.jtable-page-number-next.ui-button.ui-state-default:not(.ui-state-disabled)")
@@ -254,7 +255,7 @@ def fetch_jobs():
 
                 ActionChains(driver).move_to_element(load_more_button).click().perform()
                 logger.info(f"LANL: Clicked 'Load more jobs' ({i + 1}/{max_clicks})")
-                time.sleep(2) # Increased wait for jobs to load after click
+                time.sleep(1) # Increased wait for jobs to load after click
             except TimeoutException:
                 logger.info("LANL: 'Load more jobs' button not found or not clickable (possibly all jobs loaded or button disabled).")
                 break
@@ -322,17 +323,10 @@ def fetch_jobs():
         output_dir = "output"
         os.makedirs(output_dir, exist_ok=True)
         
-        all_titles_path = os.path.join(output_dir, "job_titles_lanl.txt")
-        with open(all_titles_path, "w", encoding="utf-8") as f:
-            for title in all_titles:
-                f.write(title + "\n")
-        logger.info(f"LANL: All job titles saved to {all_titles_path}")
-
-        results_path = os.path.join(output_dir, "job_results_lanl.txt")
-        with open(results_path, "w", encoding="utf-8") as f:
-            for job in jobs:
-                f.write(f"{job['title']} -> {job['url']}\n")
-        logger.info(f"LANL: Filtered job results saved to {results_path}")
+        output_path = os.path.join(output_dir, "lanl_jobs.yaml")
+        with open(output_path, "w", encoding="utf-8") as f:
+            yaml.dump({"all_titles": all_titles, "jobs": jobs}, f, allow_unicode=True)
+        logger.info(f"LANL: Job data written to {output_path}")
 
     return jobs
 
