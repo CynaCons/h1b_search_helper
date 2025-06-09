@@ -6,6 +6,7 @@ from sites import llmit
 import os
 import shutil
 import logging
+import job_db
 
 logging.basicConfig(
     level=logging.INFO,
@@ -21,12 +22,27 @@ def run_all():
     # Recreate the output directory
     os.makedirs(output_dir, exist_ok=True)
 
+    db = job_db.load_db()
+
+    sites = [
+        (sri, "sri"),
+        (llmit, "llmit"),
+        (swri, "swri"),
+        (umich, "umich"),
+        (lanl, "lanl"),
+    ]
+
     all_jobs = []
-    all_jobs.extend(lanl.fetch_jobs())
-    all_jobs.extend(sri.fetch_jobs())
-    all_jobs.extend(llmit.fetch_jobs())
-    all_jobs.extend(swri.fetch_jobs())
-    all_jobs.extend(umich.fetch_jobs())
+    for module, name in sites:
+        jobs = module.fetch_jobs()
+        new_jobs = job_db.add_jobs(name, jobs, db)
+        if new_jobs:
+            logging.info(f"New jobs for {name}:")
+            for job in new_jobs:
+                logging.info(f"  {job['title']} | {job['url']}")
+        all_jobs.extend(jobs)
+
+    job_db.save_db(db)
 
 if __name__ == "__main__":
     run_all()
