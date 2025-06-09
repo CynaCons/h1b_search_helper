@@ -237,7 +237,7 @@ def fetch_jobs():
         # Depending on strictness, you might want to `return []` here if cookie consent is mandatory.
 
         logger.info("LANL: Starting to click 'Load more jobs'.")
-        max_clicks = 50
+        max_clicks = 100
         for i in range(max_clicks):
             try:
                 load_more_button_locator = (By.CSS_SELECTOR, "span.jtable-page-number-next.ui-button.ui-state-default:not(.ui-state-disabled)")
@@ -255,7 +255,7 @@ def fetch_jobs():
 
                 ActionChains(driver).move_to_element(load_more_button).click().perform()
                 logger.info(f"LANL: Clicked 'Load more jobs' ({i + 1}/{max_clicks})")
-                time.sleep(2) # Increased wait for jobs to load after click
+                time.sleep(1) # Increased wait for jobs to load after click
             except TimeoutException:
                 logger.info("LANL: 'Load more jobs' button not found or not clickable (possibly all jobs loaded or button disabled).")
                 break
