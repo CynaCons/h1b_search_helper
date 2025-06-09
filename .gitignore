@@ -175,7 +175,4 @@ cython_debug/
 
 output
 
-# persistent job database
-jobs_db.yaml
-
 .vscode
