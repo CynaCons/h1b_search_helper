@@ -24,9 +24,15 @@ def fetch_jobs():
     driver = webdriver.Chrome()
 
     try:
-        driver.get("https://careers.umich.edu/")
+        # Navigate directly to the job search page.  The previous root URL
+        # https://careers.umich.edu/ performs a redirect that Selenium sometimes
+        # fails to treat as secure which results in an error.  Loading the
+        # dedicated search page avoids this issue.
+        driver.get("https://careers.umich.edu/search-jobs")
 
-        # Click the initial search button
+        # Click the "Search" button to load all jobs without any filters.  This
+        # button has the id "edit-submit-job-search" and must be clicked before
+        # the results table is populated.
         search_button = WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.ID, "edit-submit-job-search"))
         )
