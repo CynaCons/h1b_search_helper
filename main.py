@@ -4,6 +4,7 @@ from sites import lanl
 from sites import sri
 from sites import llmit
 from sites import vanderbilt_isis
+from sites import osu
 import os
 import shutil
 import logging
@@ -26,6 +27,7 @@ def run_all():
     db = job_db.load_db()
 
     sites = [
+        (osu, "osu"),
         (sri, "sri"),
         (llmit, "llmit"),
         (swri, "swri"),
