@@ -1,74 +1,82 @@
 import logging
-import os
-import yaml
-import requests
+import time
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-)
+logger = logging.getLogger("osu")
 
-KEYWORDS = [
-    "embedded", "firmware", "autosar", "real-time", "real time", "software",
-    "bare metal", "bsp", "rtos", "low level", "low-level", "device driver"
-]
-
-logger = logging.getLogger(__name__)
+KEYWORDS = ["software", "firmware", "embedded", "robotics", "autonomy"]
+BASE_URL = "https://osu.wd1.myworkdayjobs.com/OSUCareers"
 
 
 def fetch_jobs():
-    """Fetch job postings from Ohio State University's Workday feed."""
-    url = "https://osu.wd1.myworkdayjobs.com/wday/cxs/osu/OSUCareers/jobs"
-    headers = {"Content-Type": "application/json"}
-
     jobs = []
-    all_titles = []
+    logger.info("OSU: Starting Selenium WebDriver")
 
-    offset = 0
-    limit = 50
-    total = None
+    driver = webdriver.Chrome()
 
-    while total is None or offset < total:
-        payload = {
-            "appliedFacets": {},
-            "limit": limit,
-            "offset": offset,
-            "searchText": "",
-        }
-        try:
-            resp = requests.post(url, json=payload, headers=headers, timeout=10)
-            resp.raise_for_status()
-        except Exception as e:
-            logger.error(f"OSU: Error fetching jobs at offset {offset}: {e}")
-            break
+    try:
+        logger.info(f"OSU: Navigating to {BASE_URL}")
+        driver.get(BASE_URL)
 
-        data = resp.json()
-        total = data.get("total", 0)
-        postings = data.get("jobPostings", [])
+        # Wait for the keyword search box to appear
+        search_box = WebDriverWait(driver, 20).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, "input[data-automation-id='keywordSearchInput']"))
+        )
 
-        for post in postings:
-            title = post.get("title", "").strip()
-            ext_path = post.get("externalPath")
-            if not title or not ext_path:
-                continue
+        # Clear, enter search keyword, and submit
+        keyword = "embedded"
+        search_box.clear()
+        search_box.send_keys(keyword)
+        search_box.send_keys(Keys.RETURN)
 
-            if not ext_path.startswith("http"):
-                job_url = f"https://osu.wd1.myworkdayjobs.com/en-US/OSUCareers{ext_path}"
-            else:
-                job_url = ext_path
+        # Wait for results to appear
+        WebDriverWait(driver, 20).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, "ul[role='list']"))
+        )
+        time.sleep(2)
 
-            all_titles.append(title)
+        while True:
+            links = driver.find_elements(By.CSS_SELECTOR, "a[data-automation-id='jobTitle']")
+            logger.info(f"OSU: Found {len(links)} job links on this page")
 
-            if any(keyword.lower() in title.lower() for keyword in KEYWORDS):
-                jobs.append({"title": title, "url": job_url})
-                logger.info(f"OSU: Match found -> {title}")
+            for link in links:
+                title = link.text.strip().lower()
+                href = link.get_attribute("href")
+                if any(keyword in title for keyword in KEYWORDS):
+                    logger.info(f"OSU: Matched job - {title}")
+                    jobs.append({"title": title, "url": href})
 
-        offset += limit
+            try:
+                next_button = driver.find_element(By.CSS_SELECTOR, "button[aria-label='next']")
+                if "disabled" in next_button.get_attribute("class"):
+                    logger.info("OSU: No more pages. Reached the end.")
+                    break
+                else:
+                    logger.info("OSU: Moving to next page")
+                    next_button.click()
+                    WebDriverWait(driver, 15).until(
+                        EC.staleness_of(links[0])  # Wait until new page loads
+                    )
+            except Exception:
+                logger.info("OSU: No 'next' button found or failed to click. Ending pagination.")
+                break
 
-    os.makedirs("output", exist_ok=True)
-    output_path = os.path.join("output", "osu_jobs.yaml")
-    with open(output_path, "w", encoding="utf-8") as f:
-        yaml.dump({"all_titles": all_titles, "jobs": jobs}, f, allow_unicode=True)
-    logger.info(f"OSU: Job data written to {output_path}")
+    except Exception as e:
+        logger.error(f"OSU: Failed to fetch jobs - {e}")
+
+    finally:
+        driver.quit()
 
     return jobs
+
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+    results = fetch_jobs()
+    print(f"Found {len(results)} matching jobs")
+    for job in results:
+        print(job["title"], "->", job["url"])
