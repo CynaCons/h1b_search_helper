@@ -1,5 +1,7 @@
 import logging
+import os
 import time
+import yaml
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -14,6 +16,7 @@ BASE_URL = "https://osu.wd1.myworkdayjobs.com/OSUCareers"
 
 def fetch_jobs():
     jobs = []
+    all_titles = []
     logger.info("OSU: Starting Selenium WebDriver")
 
     driver = webdriver.Chrome()
@@ -44,9 +47,10 @@ def fetch_jobs():
             logger.info(f"OSU: Found {len(links)} job links on this page")
 
             for link in links:
-                title = link.text.strip().lower()
+                title = link.text.strip()
                 href = link.get_attribute("href")
-                if any(keyword in title for keyword in KEYWORDS):
+                all_titles.append(title)
+                if any(keyword in title.lower() for keyword in KEYWORDS):
                     logger.info(f"OSU: Matched job - {title}")
                     jobs.append({"title": title, "url": href})
 
@@ -70,6 +74,12 @@ def fetch_jobs():
 
     finally:
         driver.quit()
+
+        os.makedirs("output", exist_ok=True)
+        output_path = os.path.join("output", "osu_jobs.yaml")
+        with open(output_path, "w", encoding="utf-8") as f:
+            yaml.dump({"all_titles": all_titles, "jobs": jobs}, f, allow_unicode=True)
+        logger.info(f"OSU: Job data written to {output_path}")
 
     return jobs
 
