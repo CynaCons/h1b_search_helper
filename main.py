@@ -5,6 +5,7 @@ from sites import sri
 from sites import llmit
 from sites import vanderbilt_isis
 from sites import osu
+
 import os
 import shutil
 import logging
@@ -34,6 +35,7 @@ def run_all():
         (umich, "umich"),
         (lanl, "lanl"),
         (vanderbilt_isis, "vanderbilt_isis"),
+
     ]
 
     all_jobs = []
